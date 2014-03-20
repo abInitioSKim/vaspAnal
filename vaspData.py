@@ -122,7 +122,7 @@ def readCONTCAR(fileName='CONTCAR',output='contcar.xyz', rtspecies = False):
                 coord = latticeVecs[0]*coord[0]+latticeVecs[1]*coord[1]+latticeVecs[2]*coord[2]
             else: 
                 print "check coord! it's not direct form"
-                #~ print coord
+
             atomSet.append([symbol,coord])
         k+=1
     f.close()
