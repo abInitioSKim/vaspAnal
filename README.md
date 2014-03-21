@@ -1,4 +1,0 @@
-vaspAnal
-========
-
-vasp analysis tools
