@@ -43,31 +43,40 @@ def readPROCAR(fileName='PROCAR', orbital=-1):
     nKpt   = int(re.search('(?<=# of k-points:)\s+\d+',buffer[1]).group(0) )
     nBands = int(re.search('(?<=# of bands:)\s+\d+'   ,buffer[1]).group(0) )
     nIons  = int(re.search('(?<=# of ions:)\s+\d+'    ,buffer[1]).group(0) )
-    #print buffer[1]
-    print nKpt, nBands, nIons
     
-    Proj = np.zeros((nKpt,nBands,nIons))
+    nOrbits = 10 #    s     py     pz     px    dxy    dyz    dz2    dxz    dx2   tot
+    Proj = np.zeros((nKpt,nBands,nIons,nOrbits))
     Kpts = np.zeros((nKpt,3))
     Eigs = np.zeros((nKpt,nBands))
     Occs = np.zeros((nKpt,nBands))
+
+    kptInfoLength =1
+    for i in [line.find(' k-point') for line in buffer[3+1:]]:
+        kptInfoLength-=i
+        if i==0:break
+
+
     for kpt in range(nKpt):
         # read k-th band projection to ion orbital 
         # read k-point
-        ''' k-point    3 :    0.00000000 0.33333333 0.00000000     weight = 0.07407407'''
-        kptLineNum = 2 + 1 + (nBands*(3*nIons + 6 )+3 )* kpt
-        #print kptLineNum
+        kptLineNum = 2 + 1 + kptInfoLength* kpt
         kptLine = buffer[kptLineNum]
+
         kVec = re.search('(?<=:)\s*([-]?[0-9]*\.?[0-9]+)\s*([-]?[0-9]*\.?[0-9]+)\s*([-]?[0-9]*\.?[0-9]+)',kptLine)
         kVec = np.array( [float(kVec.group(1)), float(kVec.group(2)), float(kVec.group(3))] )
         Kpts[kpt,:] = kVec
         
-        # read  band wight
         kp_weight = float( re.search('(?<=weight =)\s*[-]?[0-9]*\.?[0-9]+',kptLine).group(0) )
-        #print kVec
-        #print kp_weight
+
+        bandInfoLength =1
+        for i in [line.find('band') for line in buffer[kptLineNum+2+1:]]:
+            bandInfoLength-=i
+            if i==0:break
+        # print bandInfoLength
 
         for band in range(nBands): 
-            bandLineNum = kptLineNum + 2 + band * (nIons *3 +6)
+            # bandLineNum = kptLineNum + 2 + band * (nIons *3 +6) #works for only non-S*L coupling
+            bandLineNum = kptLineNum + 2 + band *bandInfoLength
             eig = float( re.search('(?<=energy)\s+[-]?[0-9]*\.?[0-9]+',buffer[bandLineNum]).group(0) )
             occ = float( re.search('(?<=occ.)\s+[-]?[0-9]*\.?[0-9]+',buffer[bandLineNum]).group(0) )
             
@@ -76,12 +85,11 @@ def readPROCAR(fileName='PROCAR', orbital=-1):
 
             for ion in range(nIons):
                 ionLineNum = bandLineNum +3 + ion
-                orbital_proj = buffer[ionLineNum].split()[orbital]
-                Proj[kpt,band,ion] = float(orbital_proj) * kp_weight
-        #print buffer[ionLineNum].split()[orbital]
-        #print buffer[bandLineNum]
-        #lineNum = ()
-    return nKpt, nBands, nIons, Kpts, Eigs, Occs, Proj
+
+                orbital_proj = [float(o) for o in buffer[ionLineNum].split()[1:]]
+                Proj[kpt,band,ion,:] = orbital_proj
+
+    return nKpt, nBands, nIons, Kpts, Eigs, Proj, Occs
 
 def readCONTCAR(fileName='CONTCAR',output='contcar.xyz', rtspecies = False):
     latticeVecs=[]
@@ -183,6 +191,7 @@ def readLOCPOT(finaName='LOCPOT'):
     return  a,[scLatVecx,scLatVecy,scLatVecz],[gridx,gridy,gridz] , LOCPOT
 
 def readLOCPOT_lowMemory(finaName='LOCPOT'):
+    ''' probably you don't want to use this'''
     state = 0
     value = []
     LOCPOT = []
