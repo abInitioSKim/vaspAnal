@@ -31,7 +31,8 @@ proj = PROCAR[5]
 kpts =np.append([kpts[0]],kpts,axis=0)
 x = [ np.linalg.norm(kpts[i] - kpts[i-1]) for i,k in enumerate(kpts)]
 x = x[:-1]
-x = [dist if dist <0.3 else 0 for dist in x]
+x[0]=0
+#x = [dist if dist != 0  else 0 for dist in x]
 x = np.cumsum(x)
 
 
