@@ -10,10 +10,14 @@ import matplotlib.pyplot as plt
 from vaspData import readPROCAR
 
 def orbitColor(proj, opt='spd'):
-    if opt == 'spd': 
+    if opt == 'spd':
         s = proj[0]
-        p = np.sum(proj[1:4])
-        d = np.sum(proj[4:9])
+        if len(proj)>4:
+            p = np.sum(proj[1:4])
+            d = np.sum(proj[4:9])
+        else :
+            p = proj[1]
+            d = proj[2]  
         c = np.array([s,p,d])/(np.max([s,p,d]))
         return c
     elif opt == 'dz2':
@@ -23,6 +27,7 @@ def orbitColor(proj, opt='spd'):
 
 #PROCAR = readPROCAR('PROCAR_MoS2')
 PROCAR = readPROCAR('PROCAR_Si')
+#PROCAR = readPROCAR('/home/users/zeneco/00_Si_direct/74_new5/01_368/05_Band/PROCAR')
 
 kpts = PROCAR[3]
 eigs = PROCAR[4]
@@ -42,7 +47,7 @@ proj = proj.reshape(np.prod(proj.shape)/proj.shape[-1],proj.shape[-1])
 
 #proj = np.array([orbitColor(p, 'dz2' ) for p in proj])
 color = np.array([orbitColor(p, 'spd' ) for p in proj])
-
+print np.sum(color,axis=0)
 
 X = np.tile(x,(1,eigs.shape[1])).flatten()
 X = np.repeat(x,eigs.shape[1])

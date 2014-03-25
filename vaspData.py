@@ -44,7 +44,7 @@ def readPROCAR(fileName='PROCAR', orbital=-1):
     nBands = int(re.search('(?<=# of bands:)\s+\d+'   ,buffer[1]).group(0) )
     nIons  = int(re.search('(?<=# of ions:)\s+\d+'    ,buffer[1]).group(0) )
     
-    nOrbits = 10 #    s     py     pz     px    dxy    dyz    dz2    dxz    dx2   tot
+    nOrbits = len(buffer[7].split())-1
     Proj = np.zeros((nKpt,nBands,nIons,nOrbits))
     Kpts = np.zeros((nKpt,3))
     Eigs = np.zeros((nKpt,nBands))
