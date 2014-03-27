@@ -27,9 +27,11 @@ def orbitColor(proj, opt='spd'):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("procar_path", help="PROCAR file path is needed. default is ./PROCAR",default = "./PROCAR")
+parser.add_argument("-o", "--orbital", choices=['spd','dz2'], default='spd', help="how to colorize which orbital")
 
 args = parser.parse_args()
 procar_path = args.procar_path
+opt = args.orbital
 
 
 PROCAR = readPROCAR(procar_path)
@@ -46,13 +48,10 @@ x[0]=0
 x = np.cumsum(x)
 
 
-#Proj = np.zeros((nKpt,nBands,nIons,nOrbits))
 proj = np.sum(proj,axis=2)
 proj = proj.reshape(np.prod(proj.shape)/proj.shape[-1],proj.shape[-1])
 
-#proj = np.array([orbitColor(p, 'dz2' ) for p in proj])
-color = np.array([orbitColor(p, 'spd' ) for p in proj])
-print np.sum(color,axis=0)
+color = np.array([orbitColor(p, opt ) for p in proj])
 
 X = np.tile(x,(1,eigs.shape[1])).flatten()
 X = np.repeat(x,eigs.shape[1])
