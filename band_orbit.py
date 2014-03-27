@@ -8,6 +8,7 @@ Created on 2014. 03. 21.
 import numpy as np
 import matplotlib.pyplot as plt
 from vaspData import readPROCAR
+import argparse
 
 def orbitColor(proj, opt='spd'):
     if opt == 'spd':
@@ -24,10 +25,14 @@ def orbitColor(proj, opt='spd'):
         dz2 = proj[6]/np.sum(proj[:-1])
         return (1-dz2,1,1)
 
+parser = argparse.ArgumentParser()
+parser.add_argument("procar_path", help="PROCAR file path is needed. default is ./PROCAR",default = "./PROCAR")
 
-#PROCAR = readPROCAR('PROCAR_MoS2')
-PROCAR = readPROCAR('PROCAR_Si')
-#PROCAR = readPROCAR('/home/users/zeneco/00_Si_direct/74_new5/01_368/05_Band/PROCAR')
+args = parser.parse_args()
+procar_path = args.procar_path
+
+
+PROCAR = readPROCAR(procar_path)
 
 kpts = PROCAR[3]
 eigs = PROCAR[4]
