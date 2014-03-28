@@ -26,11 +26,11 @@ def orbitColor(proj, opt='spd'):
         return (1-dz2,1,1)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("procar_path", help="PROCAR file path is needed. default is ./PROCAR",default = "./PROCAR")
+parser.add_argument("-f","--file", help="PROCAR file path is needed. default is ./PROCAR",default = "./PROCAR")
 parser.add_argument("-o", "--orbital", choices=['spd','dz2'], default='spd', help="how to colorize which orbital")
 
 args = parser.parse_args()
-procar_path = args.procar_path
+procar_path = args.file
 opt = args.orbital
 
 

@@ -82,9 +82,9 @@ def rdf(contcar,atom1Symbol='Si',atom2Symbol='Si',binSpacing=0.1,rMax=0,nx=1,ny=
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("contcar_path", help="PROCAR file path is needed. default is ./PROCAR",default = "./PROCAR")
     parser.add_argument("atom1Symbol", help="atom1Symbol")
     parser.add_argument("atom2Symbol", help="atom2Symbol")
+    parser.add_argument("-f","--file", help="CONTCAR file path is needed. default is ./CONTCAR",default = "./CONTCAR")
     parser.add_argument("-b", "--bins", type=float, default = 0.1, help = 'bin spacing (angstrom)')
     parser.add_argument("-R", "--rMax", type=float, default = 0, help = 'maximum r, I expect you know what I mean')
 
@@ -94,10 +94,11 @@ if __name__=='__main__':
 
 
     args = parser.parse_args()
-    contcar = args.contcar_path
+    
     atom1Symbol = args.atom1Symbol
     atom2Symbol = args.atom2Symbol
 
+    contcar = args.file
     binSpacing =  args.bins
     rMax = args.rMax
 
