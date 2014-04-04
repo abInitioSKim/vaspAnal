@@ -178,14 +178,14 @@ def readLOCPOT(finaName='LOCPOT'):
     #~ print [gridx,gridy,gridz]
 
     lenthPerline = len( buffer[9+1+number].split())
-    for i in xrange(9+1+number,9+1+number+gridx*gridy*gridz/lenthPerline) :
+    for i in xrange(9+1+number,9+1+number+gridx*gridy*gridz/lenthPerline+1) :
         temp = buffer[i].split()
         for j in xrange(len(temp)) :
                 value.append(float(temp[j]))
+    
     value = np.array(value) 
     value = value[:gridx*gridy*gridz]
     
-  
     LOCPOT = value.reshape(gridz,gridy,gridx).T
 
     return  a,[scLatVecx,scLatVecy,scLatVecz],[gridx,gridy,gridz] , LOCPOT
