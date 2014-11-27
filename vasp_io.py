@@ -17,22 +17,22 @@ def findReg(reg,file):
         find += m
     return find
 
-def readEIGENVAL(fileName='EIGENVAL'):
-    # read EIGENVAL
-    f=open(fileName)
-    buffer=f.readlines()
-    [nKpt,nBand]=[int(i) for i in buffer[5].split()][1:]
-    print [nBand,nKpt]
-    bandInfo=[]
-    #print 'NOW READING ENERGY PART OF EIGENVAL FILE'
-    for j in range(nKpt):
-        for i in range(nBand):
-            eigenval = buffer[i + 8 + (nBand+2)*j].split()
-            eigenval = float(eigenval[1])
-            bandInfo.append([i+1,j+1,eigenval])    
-    f.close()
-    # [bandNum, kptNum , eigenval]
-    return [nKpt,nBand,bandInfo]
+# def readEIGENVAL(fileName='EIGENVAL'):
+#     # read EIGENVAL
+#     f=open(fileName)
+#     buffer=f.readlines()
+#     f.close()
+#     [nKpt,nBand]=[int(i) for i in buffer[5].split()][1:]
+#     # print [nBand,nKpt]
+#     bandInfo=[]
+#     #print 'NOW READING ENERGY PART OF EIGENVAL FILE'
+#     for j in range(nKpt):
+#         for i in range(nBand):
+#             eigenval = buffer[i + 8 + (nBand+2)*j].split()
+#             eigenval = float(eigenval[1])
+#             bandInfo.append([i+1,j+1,eigenval])    
+#     # [bandNum, kptNum , eigenval]
+#     return [nKpt,nBand,bandInfo]
 
 def readPROCAR(fileName='PROCAR', orbital=-1):
     f = open(fileName)
@@ -181,14 +181,15 @@ def readEIGENVAL(fileName='EIGENVAL'):
     # read EIGENVAL
     f=open(fileName)
     buffer=f.readlines()
+    f.close()
     [nKpt,nBand]=[int(i) for i in buffer[5].split()][1:]
-    print [nBand,nKpt]
+    # print [nBand,nKpt]
     bandInfo = []
     kpoints =[]
     eigenvals =np.zeros((nKpt,nBand))
     #print 'NOW READING ENERGY PART OF EIGENVAL FILE'
     for j in range(nKpt):
-        kpoint =np.array(buffer[-1 + 8 + (nBand+2)*j].split())[:3]
+        kpoint = buffer[-1 + 8 + (nBand+2)*j].split()[-4:-1]
         kpoint = np.array([float(k) for k in kpoint])
         kpoints.append(kpoint)
 
@@ -197,9 +198,8 @@ def readEIGENVAL(fileName='EIGENVAL'):
             eigenval = float(eigenval[1])
             eigenvals[j,i] = eigenval
             #bandInfo.append([i+1,j+1,eigenval])    
-    f.close()
     
-    return kpoints,eigenvals
+    return eigenvals
 
 def readDOSCAR(fileName,atomNum):
     f=open(fileName)
