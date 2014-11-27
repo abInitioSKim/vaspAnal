@@ -141,104 +141,41 @@ def readCONTCAR(fileName='CONTCAR', rtspecies = False):
     else:
         return [latConst,latticeVecs,atomSetDirect]
 
+def readLOCPOT(fileName='LOCPOT'):
+    return readCHGCAR(fileName)
 
-def readLOCPOT(finaName='LOCPOT'):
+def readCHGCAR(finaName='CHGCAR'):
     state = 0
     value = []
-    LOCPOT = []
-    sc = []
-
-    number = 0
-    grid = []
+    CHGCAR = []
 
     f = open(finaName)
     buffer = f.readlines()
     f.close()
-    # length = len(buffer)
-    a = float(buffer[1])
-    #~ print a
-    for i in xrange(2,5) :
-        sc.append(buffer[i].split())
 
-    scLatVecx = np.array([float(i) for i in sc[0]])
-    scLatVecy = np.array([float(i) for i in sc[1]])
-    scLatVecz = np.array([float(i) for i in sc[2]])
-    #~ print [scLatVecx,scLatVecy,scLatVecz]
+    lat_const = float(buffer[1])
 
-    atom = buffer[5+1].split()
-    number = sum([int(i) for i in atom])
-    #print number
+    lattice_matrix = [[float(item) for item in line.split()] 
+                       for line in buffer[2:5]]
 
-    grid = buffer[8+1+number].split()
-    gridx = int(grid[0])
-    gridy = int(grid[1])
-    gridz = int(grid[2])
-    
-    #~ print [gridx,gridy,gridz]
+    n_atom = sum([int(i) for i in buffer[6].split()])
 
-    lenthPerline = len( buffer[9+1+number].split())
-    for i in xrange(9+1+number,9+1+number+gridx*gridy*gridz/lenthPerline+1) :
-        line = buffer[i]
+    grids = [int(grid) for grid in buffer[9 + n_atom].split()]
+    # print grids
+
+    for line in buffer[10 + n_atom:]:
         if 'augmentation' in line:
             break
-        temp = line.split()
+        temp = [float(item) for item in line.split()]
+
         for j in xrange(len(temp)):
-                value.append(float(temp[j]))
+            value.append(float(temp[j]))
     
     value = np.array(value) 
-    value = value[:gridx*gridy*gridz]
     
-    LOCPOT = value.reshape(gridz,gridy,gridx).T
+    CHGCAR = value.reshape(grids[::-1]).T
 
-    return  a,[scLatVecx,scLatVecy,scLatVecz],[gridx,gridy,gridz] , LOCPOT
-
-def readLOCPOT_lowMemory(finaName='LOCPOT'):
-    ''' probably you don't want to use this'''
-    state = 0
-    value = []
-    LOCPOT = []
-    sc = []
-
-    number = 0
-    grid = []
-
-    f = open(finaName)
-    # buffer = f.readlines()
-    # length = len(buffer)
-
-    '''read lattice constant'''
-    f.readline() # system
-    a = float(f.readline())
-
-    ''' read supercell lattice vector '''
-    for i in xrange(2,5) :
-        sc.append(f.readline().split())
-
-    scLatVecx = np.array([float(i) for i in sc[0]])
-    scLatVecy = np.array([float(i) for i in sc[1]])
-    scLatVecz = np.array([float(i) for i in sc[2]])
-    #~ print [scLatVecx,scLatVecy,scLatVecz]
-
-    '''   read atom species and number of atoms   '''
-    atom = f.readline().split()
-    noAtom = np.array([ int(a) for a in f.readline().split()])
-
-
-    '''   read atomic positions   '''
-    for i in range(noAtom.sum()+2):
-        f.readline()
-
-    
-    '''   read grid points   '''
-    gridx,gridy,gridz = [ int(a) for a in f.readline().split()]
-    # print gridx,gridy,gridz
-
-    value = []
-    for line in f:
-        value += [float(a) for a in line.split()]
-        # value = np.append(value,np.array( [float(a) for a in line.split()]))
-    value = np.array(value).reshape(gridz,gridy,gridx).T
-
+    return  lat_const, lattice_matrix, CHGCAR
 
 def readEIGENVAL(fileName='EIGENVAL'):
     # read EIGENVAL
@@ -346,7 +283,6 @@ def readDOSCAR(fileName,atomNum):
     eSet   =np.array(eSet   )
     return [eSet,tDOSSet,sDOSSet,pDOSSet,dDOSSet]
 
-
 def writePOSCAR(output,latConst,latticeVecs,atomSetDirect,lSelective=False,lDirect=True):
     species = [atom[0] for atom in atomSetDirect]
     species1 = list(set(species))
@@ -383,7 +319,6 @@ def writePOSCAR(output,latConst,latticeVecs,atomSetDirect,lSelective=False,lDire
         f.write('\n')
 
     f.close()
-
 
 def getNELECT(OUTCAR):
     '   NELECT =     338.0000    total number of electrons'
@@ -471,10 +406,12 @@ def get_enthalpy(dir_name):
     return tot_E
 
 if __name__ == '__main__':
-    outcar = readOUTCAR('./test_Si_run/00000/OUTCAR')
-    a,[scLatVecx,scLatVecy,scLatVecz],[gridx,gridy,gridz], LOCPOT =\
-                                        readLOCPOT('./test_Si_run/00000/CHGCAR')
+    # outcar = readOUTCAR('./test_Si_run/00000/OUTCAR')
+    lat_const, lattice_matrix, CHGCAR = readLOCPOT('CHGCAR')
+    from pylab import *
+    print CHGCAR.shape
+    imshow(np.average(CHGCAR, axis=2).T)
+    plt.show()
+    # print np.sum(LOCPOT) / np.prod([gridx,gridy,gridz])
 
-    print np.sum(LOCPOT) / np.prod([gridx,gridy,gridz])
-
-    print get_tot_E_outcar(outcar)
+    # print get_tot_E_outcar(outcar)
