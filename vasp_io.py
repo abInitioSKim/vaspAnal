@@ -1,30 +1,11 @@
-#!/usr/bin/python
 '''
-Created on 2013. 10.  16.
-
+Created on 2014.  05.  14.
+ 
 @author: nwan
 @author: hanwooh
 '''
 import numpy as np 
 import re
-
-
-def writeData(fileName, data,shape):
-    f = open(fileName,'w')
-    for l in shape:
-        f.write(str(l)+' ')
-    f.write('\r\n')
-    for d in np.ravel(data):
-        f.write(str(d)+' ')
-    f.close()
-
-def readData(fileName):
-    f = open(fileName,'r')
-    shape = np.array(f.readline().split()).astype(np.int)
-    #print shape
-    data = np.array(f.readline().split()).astype(np.float)
-    data = data.reshape(shape)
-    return data
 
 def findReg(reg,file):
     f = open(file)
@@ -52,47 +33,6 @@ def readEIGENVAL(fileName='EIGENVAL'):
     f.close()
     # [bandNum, kptNum , eigenval]
     return [nKpt,nBand,bandInfo]
-
-
-def readKPOINTS_linemode(fileName = 'KPOINTS'):
-    f = open(fileName)
-    buffer = f.readlines()
-    f.close()
-    comment = buffer[0]
-    
-    lables = []
-    nkpt_line = int(buffer[1].split()[0])
-
-    m = re.search('\s\w([-\s]\w)*$', comment)
-    if  False and m:
-        special_kpoints = m.group(0).strip()
-        # print special_kpoints
-        for i, kpt in enumerate(special_kpoints):
-            if kpt.isalpha() and not special_kpoints[i - 1] == ' ':
-                lables.append(kpt)
-            elif kpt == ' ':
-                lables[-1] = lables[-1] + '|' + special_kpoints[i+1]
-    else:
-        for line in buffer[4:]:
-            # print line
-            m = re.search('(?<=! )\s*[\\\$\w]+\s*$', line)
-            if m:
-                lables.append(m.group(0).strip())
-
-        lables_merged = [lables[0]]
-        for i in range(1, len(lables) , 2):
-            l_1 = lables[i]
-            if i + 1 > len(lables) - 1 or lables[i] == lables[i + 1]:
-                lables_merged.append(lables[i])
-            else:
-                lables_merged.append(lables[i] + '|' + lables[i + 1])
-
-        lables = lables_merged
-        for i, l in enumerate(lables):
-            if 'G' in l:
-                lables[i] = '$\Gamma$' 
-    return nkpt_line, lables
-
 
 def readPROCAR(fileName='PROCAR', orbital=-1):
     f = open(fileName)
@@ -238,8 +178,11 @@ def readLOCPOT(finaName='LOCPOT'):
 
     lenthPerline = len( buffer[9+1+number].split())
     for i in xrange(9+1+number,9+1+number+gridx*gridy*gridz/lenthPerline+1) :
-        temp = buffer[i].split()
-        for j in xrange(len(temp)) :
+        line = buffer[i]
+        if 'augmentation' in line:
+            break
+        temp = line.split()
+        for j in xrange(len(temp)):
                 value.append(float(temp[j]))
     
     value = np.array(value) 
@@ -302,7 +245,7 @@ def readEIGENVAL(fileName='EIGENVAL'):
     f=open(fileName)
     buffer=f.readlines()
     [nKpt,nBand]=[int(i) for i in buffer[5].split()][1:]
-    # print [nBand,nKpt]
+    print [nBand,nKpt]
     bandInfo = []
     kpoints =[]
     eigenvals =np.zeros((nKpt,nBand))
@@ -361,20 +304,17 @@ def readDOSCAR(fileName,atomNum):
 
 
     ''' read average pdos or specific atom pdos '''
-    if not atomNum:
-        atomSet = range(numAtom)
-    elif len(atomNum) > 1 or atomNum[0] != 0 :
-        atomSet = atomNum
+    if atomNum>0:
+        atomSet = [atomNum]
     else:
         atomSet = range(numAtom)
-    
+
 
     ''' read pdos  '''
     sDOSSetSum = np.zeros(numRow)
     pDOSSetSum = np.zeros(numRow)
     dDOSSetSum = np.zeros(numRow)
-    for atomNum_i in atomSet:
-        # print atomNum_i
+    for atomNum_i in range(numAtom):
         # eSet=[]
         sDOSSet=[]
         pDOSSet=[]
@@ -406,59 +346,135 @@ def readDOSCAR(fileName,atomNum):
     eSet   =np.array(eSet   )
     return [eSet,tDOSSet,sDOSSet,pDOSSet,dDOSSet]
 
-def getNELECT(OUTCAR = 'OUTCAR'):
+
+def writePOSCAR(output,latConst,latticeVecs,atomSetDirect,lSelective=False,lDirect=True):
+    species = [atom[0] for atom in atomSetDirect]
+    species1 = list(set(species))
+    species1.sort(key=species.index)
+    species=species1
+
+    f = open(output,'w')
+    f.write('system\n')
+    f.write(str(latConst)+'\n')
+    
+
+    for latticeVec in latticeVecs:
+        for i in range(3):
+            f.write(str(latticeVec[i]) + ' ')
+        f.write('\n')
+    
+    for s in species:
+        f.write(s + ' ')    
+    f.write('\n')
+
+    for s in species:
+        n = len([atom for atom in atomSetDirect if atom[0]==s])
+        f.write(str(n)+' ' )
+    f.write('\n')
+
+    if lSelective: f.write('Selective dynamics\n')
+    if lDirect: f.write('Direct\n')
+    else : f.write('Cartesian\n')
+    for atom in atomSetDirect:
+        f.write(str(atom[1][0])+' '+str(atom[1][1])+' '+ str(atom[1][2])+' ' )
+        if lSelective:
+            # print lSelective
+            f.write(str(atom[2][0])+' '+str(atom[2][1])+' '+ str(atom[2][2])+' ' )
+        f.write('\n')
+
+    f.close()
+
+
+def getNELECT(OUTCAR):
     '   NELECT =     338.0000    total number of electrons'
     nelect = findReg('(?<=NELECT =)\s+\d+', OUTCAR)
     return int(nelect[0])
 
-def getLSORBIT(OUTCAR = 'OUTCAR'):
-    'LSORBIT =      T'
-    lsorbit = findReg('(?<=LSORBIT =)\s+[TF]', OUTCAR)[0].strip()
-    if lsorbit == 'T':
-        lsorbit = True
-    else :
-        lsorbit = False
-    return lsorbit
-
-
 def getVBM(EIGENVAL,band_no = 0):
-    lsorbit = getLSORBIT('OUTCAR')
-    if lsorbit :
-        spin_multi = 2 
-    else:
-        spin_multi = 1
     if band_no == 0:
-        band_no = getNELECT('OUTCAR')/2 
-    band_no *= spin_multi
-    eigenval = findReg('(?<=^'+ str(band_no).rjust(5) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
+        band_no = getNELECT('OUTCAR')/2
+    eigenval = findReg('(?<=^'+ str(band_no).rjust(4) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
     vbm = [float(e) for e in eigenval]
-    index = np.argmax(vbm)
-    return vbm[index], index
+    vbm = max(vbm)
+    return vbm
 
 def getCBM(EIGENVAL,band_no = 0):
-    lsorbit = getLSORBIT('OUTCAR')
-    if lsorbit :
-        spin_multi = 2 
-    else:
-        spin_multi = 1
     if band_no == 0:
         band_no = getNELECT('OUTCAR') / 2 + 1
-    band_no *= spin_multi
-    eigenval = findReg('(?<=^'+ str(band_no).rjust(5) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
+    eigenval = findReg('(?<=^'+ str(band_no).rjust(4) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
     cbm = [float(e) for e in eigenval]
-    index = np.argmin(cbm)
-    return cbm[index], index
+    cbm = min(cbm)
+    return cbm
 
-
-def getEgap(EIGENVAL='EIGENVAL'):
-    # n_elect = getNELECT(OUTCAR)
-    vbm, i = getVBM(EIGENVAL)
-    cbm, j = getCBM(EIGENVAL)
+def getEgap(OUTCAR, EIGENVAL):
+    n_elect = getNELECT(OUTCAR)
+    vbm = getVBM(EIGENVAL, n_elect/2)
+    cbm = getCBM(EIGENVAL, n_elect/2+1)
     egap = cbm - vbm
-    return egap, i, j 
+    return egap
+
+def getTotE(OSZICAR):
+    ' 1 F= -.54010511E+03 E0= -.54010511E+03  d E =-.786584E-14'
+    energy = findReg('(?<=F=)\s+[-+]?[0-9]*\.?[0-9]+[eE][-+]?[0-9]+? ', OSZICAR)
+    totE = [float(e) for e in energy]
+    totE = totE[len(totE)-1]
+    return totE
+
+def get_tot_E_outcar(outcar, enthalpy=None):
+    # get total energy from line of outcar
+    '  free  energy   TOTEN  =       -53.472728 eV'
+    '''
+    FREE ENERGIE OF THE ION-ELECTRON SYSTEM (eV)
+    ---------------------------------------------------
+    free  energy   TOTEN  =      -178.22800012 eV
+
+    energy  without entropy=     -178.22769568  energy(sigma->0) =     -178.22789864
+    enthalpy is  TOTEN    =      -153.45223930 eV   P V=       24.77576082
+    '''
+    if not enthalpy:
+        for line in outcar:
+            enthalpy = 'enthalpy' in line
+            if enthalpy:
+                break
+    if enthalpy:
+        reg = '(?<=enthalpy is  TOTEN)\s*=\s+[-+]?[0-9]*\.?[0-9]+'
+    else:
+        reg = '(?<=free  energy   TOTEN)\s*=\s+[-+]?[0-9]*\.?[0-9]+'
+    find = []
+    for line in outcar:
+        m = re.findall(reg, line)
+        find += m
+    tot_E = float(find[-1].replace('=',''))
+    return tot_E
+
+def readOUTCAR(OUTCAR='OUTCAR'):
+    f = open(OUTCAR, 'r')
+    outcar = f.readlines()
+    f.close()
+    return outcar
+
+def writeOUTCAR(outcar, output_file='OUTCAR'):
+    f = open(output_file, 'w')
+    f.writelines(outcar)
+    f.close()
+
+def get_enthalpy(dir_name):
+    outcar = readOUTCAR('{}/OUTCAR' % dir_name)
+    # get total energy from line of outcar
+    '  free  energy   TOTEN  =       -53.472728 eV'
+    reg = '(?<=TOTEN  =)\s+[-+]?[0-9]*\.?[0-9]+'
+    find = []
+    for line in outcar:
+        m = re.findall(reg, line)
+        find += m
+    tot_E = float(find[-1])
+    return tot_E
 
 if __name__ == '__main__':
-    #egap, i, j = getEgap('/home/users/nwan/02Project/16_MX2HETERO/slab_multi/band/MoS2/EIGENVAL')
-    egap, i, j = getEgap()
-    print egap, i, j
-    print 'direct: ', i == j
+    outcar = readOUTCAR('./test_Si_run/00000/OUTCAR')
+    a,[scLatVecx,scLatVecy,scLatVecz],[gridx,gridy,gridz], LOCPOT =\
+                                        readLOCPOT('./test_Si_run/00000/CHGCAR')
+
+    print np.sum(LOCPOT) / np.prod([gridx,gridy,gridz])
+
+    print get_tot_E_outcar(outcar)
