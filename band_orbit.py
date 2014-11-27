@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 '''
 Created on 2014. 03. 21.
 

@@ -8,6 +8,24 @@ Created on 2013. 10.  16.
 import numpy as np 
 import re
 
+
+def writeData(fileName, data,shape):
+    f = open(fileName,'w')
+    for l in shape:
+        f.write(str(l)+' ')
+    f.write('\r\n')
+    for d in np.ravel(data):
+        f.write(str(d)+' ')
+    f.close()
+
+def readData(fileName):
+    f = open(fileName,'r')
+    shape = np.array(f.readline().split()).astype(np.int)
+    #print shape
+    data = np.array(f.readline().split()).astype(np.float)
+    data = data.reshape(shape)
+    return data
+
 def findReg(reg,file):
     f = open(file)
     lines = f.readlines()
@@ -34,6 +52,47 @@ def readEIGENVAL(fileName='EIGENVAL'):
     f.close()
     # [bandNum, kptNum , eigenval]
     return [nKpt,nBand,bandInfo]
+
+
+def readKPOINTS_linemode(fileName = 'KPOINTS'):
+    f = open(fileName)
+    buffer = f.readlines()
+    f.close()
+    comment = buffer[0]
+    
+    lables = []
+    nkpt_line = int(buffer[1].split()[0])
+
+    m = re.search('\s\w([-\s]\w)*$', comment)
+    if  False and m:
+        special_kpoints = m.group(0).strip()
+        # print special_kpoints
+        for i, kpt in enumerate(special_kpoints):
+            if kpt.isalpha() and not special_kpoints[i - 1] == ' ':
+                lables.append(kpt)
+            elif kpt == ' ':
+                lables[-1] = lables[-1] + '|' + special_kpoints[i+1]
+    else:
+        for line in buffer[4:]:
+            # print line
+            m = re.search('(?<=! )\s*[\\\$\w]+\s*$', line)
+            if m:
+                lables.append(m.group(0).strip())
+
+        lables_merged = [lables[0]]
+        for i in range(1, len(lables) , 2):
+            l_1 = lables[i]
+            if i + 1 > len(lables) - 1 or lables[i] == lables[i + 1]:
+                lables_merged.append(lables[i])
+            else:
+                lables_merged.append(lables[i] + '|' + lables[i + 1])
+
+        lables = lables_merged
+        for i, l in enumerate(lables):
+            if 'G' in l:
+                lables[i] = '$\Gamma$' 
+    return nkpt_line, lables
+
 
 def readPROCAR(fileName='PROCAR', orbital=-1):
     f = open(fileName)
@@ -91,7 +150,7 @@ def readPROCAR(fileName='PROCAR', orbital=-1):
 
     return nKpt, nBands, nIons, Kpts, Eigs, Proj, Occs
 
-def readCONTCAR(fileName='CONTCAR',output='contcar.xyz', rtspecies = False):
+def readCONTCAR(fileName='CONTCAR', rtspecies = False):
     latticeVecs=[]
     atomSet=[]
     atomSetDirect=[]
@@ -243,7 +302,7 @@ def readEIGENVAL(fileName='EIGENVAL'):
     f=open(fileName)
     buffer=f.readlines()
     [nKpt,nBand]=[int(i) for i in buffer[5].split()][1:]
-    print [nBand,nKpt]
+    # print [nBand,nKpt]
     bandInfo = []
     kpoints =[]
     eigenvals =np.zeros((nKpt,nBand))
@@ -302,17 +361,20 @@ def readDOSCAR(fileName,atomNum):
 
 
     ''' read average pdos or specific atom pdos '''
-    if atomNum>0:
-        atomSet = [atomNum]
+    if not atomNum:
+        atomSet = range(numAtom)
+    elif len(atomNum) > 1 or atomNum[0] != 0 :
+        atomSet = atomNum
     else:
         atomSet = range(numAtom)
-
+    
 
     ''' read pdos  '''
     sDOSSetSum = np.zeros(numRow)
     pDOSSetSum = np.zeros(numRow)
     dDOSSetSum = np.zeros(numRow)
-    for atomNum_i in range(numAtom):
+    for atomNum_i in atomSet:
+        # print atomNum_i
         # eSet=[]
         sDOSSet=[]
         pDOSSet=[]
@@ -344,6 +406,59 @@ def readDOSCAR(fileName,atomNum):
     eSet   =np.array(eSet   )
     return [eSet,tDOSSet,sDOSSet,pDOSSet,dDOSSet]
 
+def getNELECT(OUTCAR = 'OUTCAR'):
+    '   NELECT =     338.0000    total number of electrons'
+    nelect = findReg('(?<=NELECT =)\s+\d+', OUTCAR)
+    return int(nelect[0])
+
+def getLSORBIT(OUTCAR = 'OUTCAR'):
+    'LSORBIT =      T'
+    lsorbit = findReg('(?<=LSORBIT =)\s+[TF]', OUTCAR)[0].strip()
+    if lsorbit == 'T':
+        lsorbit = True
+    else :
+        lsorbit = False
+    return lsorbit
 
 
+def getVBM(EIGENVAL,band_no = 0):
+    lsorbit = getLSORBIT('OUTCAR')
+    if lsorbit :
+        spin_multi = 2 
+    else:
+        spin_multi = 1
+    if band_no == 0:
+        band_no = getNELECT('OUTCAR')/2 
+    band_no *= spin_multi
+    eigenval = findReg('(?<=^'+ str(band_no).rjust(5) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
+    vbm = [float(e) for e in eigenval]
+    index = np.argmax(vbm)
+    return vbm[index], index
 
+def getCBM(EIGENVAL,band_no = 0):
+    lsorbit = getLSORBIT('OUTCAR')
+    if lsorbit :
+        spin_multi = 2 
+    else:
+        spin_multi = 1
+    if band_no == 0:
+        band_no = getNELECT('OUTCAR') / 2 + 1
+    band_no *= spin_multi
+    eigenval = findReg('(?<=^'+ str(band_no).rjust(5) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
+    cbm = [float(e) for e in eigenval]
+    index = np.argmin(cbm)
+    return cbm[index], index
+
+
+def getEgap(EIGENVAL='EIGENVAL'):
+    # n_elect = getNELECT(OUTCAR)
+    vbm, i = getVBM(EIGENVAL)
+    cbm, j = getCBM(EIGENVAL)
+    egap = cbm - vbm
+    return egap, i, j 
+
+if __name__ == '__main__':
+    #egap, i, j = getEgap('/home/users/nwan/02Project/16_MX2HETERO/slab_multi/band/MoS2/EIGENVAL')
+    egap, i, j = getEgap()
+    print egap, i, j
+    print 'direct: ', i == j

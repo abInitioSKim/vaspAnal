@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/Python-2.7.3/bin/python2.7
 from vaspData import *
 import matplotlib.pyplot as plt
 import sys

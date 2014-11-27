@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2.7
 import matplotlib.pyplot as plt
 import numpy as np
 from vaspData import readCONTCAR
