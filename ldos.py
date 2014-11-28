@@ -119,8 +119,8 @@ if __name__ == '__main__':
     # argument handle
     parser = argparse.ArgumentParser()
     parser.add_argument("-p","--path",
-        help="PARCHG and EIGENVAL file path is needed. default is ./",
-        default = "./")
+        help="PARCHG and EIGENVAL file path is needed.",
+        required=True)
     parser.add_argument("-o","--output",
         help="Output file name also read it if exists. default is ldos.npy",
         default = "ldos.npy")
