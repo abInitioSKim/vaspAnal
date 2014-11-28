@@ -6,6 +6,7 @@ Created on 2014.  05.  14.
 '''
 import numpy as np 
 import re
+import itertools
 
 def findReg(reg,file):
     f = open(file)
@@ -16,23 +17,6 @@ def findReg(reg,file):
         m = re.findall(reg, line)
         find += m
     return find
-
-# def readEIGENVAL(fileName='EIGENVAL'):
-#     # read EIGENVAL
-#     f=open(fileName)
-#     buffer=f.readlines()
-#     f.close()
-#     [nKpt,nBand]=[int(i) for i in buffer[5].split()][1:]
-#     # print [nBand,nKpt]
-#     bandInfo=[]
-#     #print 'NOW READING ENERGY PART OF EIGENVAL FILE'
-#     for j in range(nKpt):
-#         for i in range(nBand):
-#             eigenval = buffer[i + 8 + (nBand+2)*j].split()
-#             eigenval = float(eigenval[1])
-#             bandInfo.append([i+1,j+1,eigenval])    
-#     # [bandNum, kptNum , eigenval]
-#     return [nKpt,nBand,bandInfo]
 
 def readPROCAR(fileName='PROCAR', orbital=-1):
     f = open(fileName)
@@ -144,62 +128,64 @@ def readCONTCAR(fileName='CONTCAR', rtspecies = False):
 def readLOCPOT(fileName='LOCPOT'):
     return readCHGCAR(fileName)
 
-def readCHGCAR(finaName='CHGCAR'):
-    state = 0
-    value = []
-    CHGCAR = []
+def readCHGCAR(file_name='CHGCAR'):
+    '''
+    read CHGCAR
+    '''
+    import math
+    VALUE_PER_LINE = 5
+    with open(file_name) as chgcar_file:
+        buffer = chgcar_file.readlines()
+        lat_const = float(buffer[1])
+        lattice_matrix = [[float(item) for item in line.split()] 
+                           for line in buffer[2:5]]
+        n_atom = sum([int(i) for i in buffer[6].split()])
+        grids = [int(grid) for grid in buffer[9 + n_atom].split()]
 
-    f = open(finaName)
-    buffer = f.readlines()
-    f.close()
-
-    lat_const = float(buffer[1])
-
-    lattice_matrix = [[float(item) for item in line.split()] 
-                       for line in buffer[2:5]]
-
-    n_atom = sum([int(i) for i in buffer[6].split()])
-
-    grids = [int(grid) for grid in buffer[9 + n_atom].split()]
-    # print grids
-
-    for line in buffer[10 + n_atom:]:
-        if 'augmentation' in line:
-            break
-        temp = [float(item) for item in line.split()]
-
-        for j in xrange(len(temp)):
-            value.append(float(temp[j]))
-    
-    value = np.array(value) 
-    
-    CHGCAR = value.reshape(grids[::-1]).T
+        value = [line for line in buffer[10 + n_atom:
+                 10 + n_atom + int(math.ceil(np.prod(grids)/VALUE_PER_LINE))]]
+        # avoid read augmentation occupancy
+        # value = list(itertools.takewhile(lambda line: 'augmentation' not in line, value))
+        value = np.array([float(item) for line in value
+                          for item in line.split()])
+        CHGCAR = value.reshape(grids[::-1]).T
 
     return  lat_const, lattice_matrix, CHGCAR
 
-def readEIGENVAL(fileName='EIGENVAL'):
+def readEIGENVAL(fileName='EIGENVAL', NELECT=False, lweight=False):
     # read EIGENVAL
     f=open(fileName)
     buffer=f.readlines()
     f.close()
     [nKpt,nBand]=[int(i) for i in buffer[5].split()][1:]
-    # print [nBand,nKpt]
-    bandInfo = []
-    kpoints =[]
+    n_elect = int(buffer[5].split()[0])
+    # bandInfo = []
+    kpoints = []
+    weight = []
     eigenvals =np.zeros((nKpt,nBand))
     #print 'NOW READING ENERGY PART OF EIGENVAL FILE'
     for j in range(nKpt):
         kpoint = buffer[-1 + 8 + (nBand+2)*j].split()[-4:-1]
         kpoint = np.array([float(k) for k in kpoint])
         kpoints.append(kpoint)
+        weight.append(float(buffer[-1 + 8 + (nBand+2)*j].split()[-1]))
 
         for i in range(nBand):
             eigenval = buffer[i + 8 + (nBand+2)*j].split()
             eigenval = float(eigenval[1])
             eigenvals[j,i] = eigenval
-            #bandInfo.append([i+1,j+1,eigenval])    
-    
-    return eigenvals
+            #bandInfo.append([i+1,j+1,eigenval])   
+
+    if NELECT:
+        if lweight:
+            returns = eigenvals, n_elect, weight
+        else:
+            returns = eigenvals, n_elect
+    elif lweight:
+        returns = eigenvals, weight
+    else:
+        returns = eigenvals 
+    return returns
 
 def readDOSCAR(fileName,atomNum):
     f=open(fileName)
@@ -410,8 +396,8 @@ if __name__ == '__main__':
     lat_const, lattice_matrix, CHGCAR = readLOCPOT('CHGCAR')
     from pylab import *
     print CHGCAR.shape
-    imshow(np.average(CHGCAR, axis=2).T)
-    plt.show()
+    # imshow(np.average(CHGCAR, axis=2).T)
+    # plt.show()
     # print np.sum(LOCPOT) / np.prod([gridx,gridy,gridz])
 
     # print get_tot_E_outcar(outcar)
