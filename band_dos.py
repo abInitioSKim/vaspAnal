@@ -6,7 +6,7 @@ import sys, itertools
 from matplotlib import rcParams, gridspec
 from matplotlib import rc
 import mpl_toolkits.axisartist as axisartist
-from vaspData import readKPOINTS_linemode, readDOSCAR
+from vasp_io import readKPOINTS_linemode, readDOSCAR
 if __name__ == '__main__':
     #rc('font',**{'family':'sans-serif','sans-serif':['Times New Roman']})
     ## for Palatino and other serif fonts use:
@@ -37,11 +37,7 @@ if __name__ == '__main__':
     rcParams.update(params)
     # rcParams.update({'figure.autolayout':True})
 
-
-
-
-
-def readBand_KPOINTS(fileName ='EIGENVAL', NELECT = 0, kpoints_file = 'KPOINTS'):
+def readBand_KPOINTS(fileName='EIGENVAL', NELECT=0, kpoints_file='KPOINTS'):
     # read EIGENVAL
     f=open(fileName)
     buffer=f.readlines()

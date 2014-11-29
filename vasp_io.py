@@ -8,7 +8,7 @@ import numpy as np
 import re
 import itertools
 
-def findReg(reg,file):
+def findReg(reg, file):
     f = open(file)
     lines = f.readlines()
     f.close()
@@ -151,6 +151,45 @@ def readCHGCAR(file_name='CHGCAR'):
         CHGCAR = value.reshape(grids[::-1]).T
 
     return  lat_const, lattice_matrix, CHGCAR
+
+def readKPOINTS_linemode(fileName = 'KPOINTS'):
+    f = open(fileName)
+    buffer = f.readlines()
+    f.close()
+    comment = buffer[0]
+    
+    lables = []
+    nkpt_line = int(buffer[1].split()[0])
+
+    m = re.search('\s\w([-\s]\w)*$', comment)
+    if  False and m:
+        special_kpoints = m.group(0).strip()
+        # print special_kpoints
+        for i, kpt in enumerate(special_kpoints):
+            if kpt.isalpha() and not special_kpoints[i - 1] == ' ':
+                lables.append(kpt)
+            elif kpt == ' ':
+                lables[-1] = lables[-1] + '|' + special_kpoints[i+1]
+    else:
+        for line in buffer[4:]:
+            # print line
+            m = re.search('(?<=! )\s*[\\\$\w]+\s*$', line)
+            if m:
+                lables.append(m.group(0).strip())
+
+        lables_merged = [lables[0]]
+        for i in range(1, len(lables) , 2):
+            l_1 = lables[i]
+            if i + 1 > len(lables) - 1 or lables[i] == lables[i + 1]:
+                lables_merged.append(lables[i])
+            else:
+                lables_merged.append(lables[i] + '|' + lables[i + 1])
+
+        lables = lables_merged
+        for i, l in enumerate(lables):
+            if 'G' in l:
+                lables[i] = '$\Gamma$' 
+    return nkpt_line, lables
 
 def readEIGENVAL(fileName='EIGENVAL', NELECT=False, lweight=False):
     # read EIGENVAL
@@ -314,7 +353,7 @@ def getNELECT(OUTCAR):
 def getVBM(EIGENVAL,band_no = 0):
     if band_no == 0:
         band_no = getNELECT('OUTCAR')/2
-    eigenval = findReg('(?<=^'+ str(band_no).rjust(4) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
+    eigenval = findReg('(?<=^'+ str(band_no).rjust(5) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
     vbm = [float(e) for e in eigenval]
     vbm = max(vbm)
     return vbm
@@ -322,7 +361,7 @@ def getVBM(EIGENVAL,band_no = 0):
 def getCBM(EIGENVAL,band_no = 0):
     if band_no == 0:
         band_no = getNELECT('OUTCAR') / 2 + 1
-    eigenval = findReg('(?<=^'+ str(band_no).rjust(4) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
+    eigenval = findReg('(?<=^'+ str(band_no).rjust(5) +')\s+[-]?[0-9]*\.?[0-9]+',EIGENVAL)
     cbm = [float(e) for e in eigenval]
     cbm = min(cbm)
     return cbm
@@ -391,13 +430,32 @@ def get_enthalpy(dir_name):
     tot_E = float(find[-1])
     return tot_E
 
-if __name__ == '__main__':
-    # outcar = readOUTCAR('./test_Si_run/00000/OUTCAR')
-    lat_const, lattice_matrix, CHGCAR = readLOCPOT('CHGCAR')
-    from pylab import *
-    print CHGCAR.shape
-    # imshow(np.average(CHGCAR, axis=2).T)
-    # plt.show()
-    # print np.sum(LOCPOT) / np.prod([gridx,gridy,gridz])
+def get_eps(OUTCAR='./OUTCAR'):
+    """
+    return diagonal component of macroscopic dielectric constant
+    """
+    reg = '(?<=diag\[e\(oo\)\]=\()\s+([\d\.\-]+\s+){3}'
+    try:
+        with open(OUTCAR) as outcar:
+            data = []
+            for line in outcar.readlines():
+                m = re.search(reg, line)
+                if m is not None:
+                    # print m.group(1).split()
+                    data += m.group().split()
+        eps =[]
+        for item in data:
+            if '-' not in item:
+                eps.append(float(item))
+        eps = [item for idx, item in enumerate(eps) if idx % 2 == 0]    
+        return eps
+    except IOError as e: 
+        print "I/O error({0}): {1}".format(e.errno, e.strerror)
+        return None
 
-    # print get_tot_E_outcar(outcar)
+if __name__ == '__main__':
+    path = '../01_bulk/111/00_000/'
+    eps = get_eps('{}/OUTCAR'.format(path))
+    gap = getEgap('{}/00_SCF/OUTCAR'.format(path), '{}/00_SCF/EIGENVAL'.format(path))
+    print eps
+    print gap
