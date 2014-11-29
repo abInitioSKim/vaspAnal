@@ -7,7 +7,7 @@ Created on 2014. 03. 21.
 '''
 import numpy as np
 import matplotlib.pyplot as plt
-from vasp_io import readPROCAR, readKPOINTS_linemode
+from vasp_io import readPROCAR, readKPOINTS_linemode, readCONTCAR, get_reciprocal_lattice
 import argparse
 
 def orbitColor(proj, opt='spd'):
@@ -48,7 +48,6 @@ def get_kpt_length(kpt_vec, nkpt_line):
     x = x[1:]
     for indx in range(len(x)):
         if indx % nkpt_line == 0:
-            print indx
             x[indx] = 0
     x = np.cumsum(x)
     return x
@@ -62,10 +61,19 @@ if __name__ == '__main__':
     procar_path = args.file
     opt = args.orbital
 
-    # procar_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/PROCAR'
-    # kpoints_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/KPOINTS'
-    procar_path = './PROCAR'
-    kpoints_path = './KPOINTS'
+    procar_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/PROCAR'
+    kpoints_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/KPOINTS'
+    contcar_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/CONTCAR'
+    # procar_path = './PROCAR'
+    # kpoints_path = './KPOINTS'
+    # contcar_path = './CONTCAR'
+
+    # lat_const, lattice_matrix, atomSetDirect = readCONTCAR(contcar_path)
+    # lattice_matrix = np.array(lattice_matrix) * lat_const
+    # print lattice_matrix
+
+    rec_mat = get_reciprocal_lattice(contcar_path)
+    print rec_mat
 
     PROCAR = readPROCAR(procar_path)
     e_fermi = get_efermi(PROCAR)
@@ -76,13 +84,10 @@ if __name__ == '__main__':
     eigs = PROCAR[4] - e_fermi
     proj = PROCAR[5]
 
-    # kpts =np.append([kpts[0]],kpts, axis=0)
-    # x = [np.linalg.norm(kpts[i] - kpts[i-1]) for i, k in enumerate(kpts)]
-    # x = x[:-1]
-    # for indx in range(len(x)):
-    #     if indx % nkpt_line == 0:
-    #         x[indx] = 0
-    # x = np.cumsum(x)
+    # kpt_vec in fractional coordinate to Cartesian coordinate
+    for index, kpt in enumerate(kpt_vec):
+        kpt_vec[index] = np.dot(kpt, rec_mat)
+
     x = get_kpt_length(kpt_vec, nkpt_line)
 
     ticks = label_ticks(x, specialKPName, nkpt_line)

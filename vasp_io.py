@@ -38,7 +38,6 @@ def readPROCAR(fileName='PROCAR', orbital=-1):
         kptInfoLength-=i
         if i==0:break
 
-
     for kpt in range(nKpt):
         # read k-th band projection to ion orbital 
         # read k-point
@@ -74,7 +73,20 @@ def readPROCAR(fileName='PROCAR', orbital=-1):
 
     return nKpt, nBands, nIons, Kpts, Eigs, Proj, Occs
 
-def readCONTCAR(fileName='CONTCAR', rtspecies = False):
+def get_reciprocal_lattice(fileName='CONTCAR'):
+
+    lat_const, lat_mat, atomSetDirect = readCONTCAR(fileName)
+    lat_mat = np.array(lat_mat) * lat_const
+
+    rec_mat = np.empty((3,3))
+
+    for index in range(3):
+        cross = np.cross(lat_mat[(index + 1) % 3], lat_mat[(index + 2) % 3])
+        rec_mat[index, :] = cross / np.dot(lat_mat[index], cross)
+
+    return rec_mat * 2. * np.pi
+
+def readCONTCAR(fileName='CONTCAR', rtspecies=False):
     latticeVecs=[]
     atomSet=[]
     atomSetDirect=[]
