@@ -36,7 +36,6 @@ def label_ticks(kpts, specialKPName, nkpt_line):
     assert len(kpts) % nkpt_line ==0, 'check KPOINTS and PROCAR files'
 
     ticks =[]
-    print len(kpts) / nkpt_line
     for indx in range(len(kpts) / nkpt_line):
         # print 'kpt', kpts[indx * nkpt_line]
         ticks.append(kpts[indx * nkpt_line])
@@ -46,13 +45,13 @@ def label_ticks(kpts, specialKPName, nkpt_line):
 def get_kpt_length(kpt_vec, nkpt_line):
     kpts =np.append([kpt_vec[0]], kpt_vec, axis=0)
     x = [np.linalg.norm(kpts[i] - kpts[i-1]) for i, k in enumerate(kpts)]
-    x = x[:-1]
+    x = x[1:]
     for indx in range(len(x)):
         if indx % nkpt_line == 0:
+            print indx
             x[indx] = 0
     x = np.cumsum(x)
     return x
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -63,8 +62,11 @@ if __name__ == '__main__':
     procar_path = args.file
     opt = args.orbital
 
-    procar_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/PROCAR'
-    kpoints_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/KPOINTS'
+    # procar_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/PROCAR'
+    # kpoints_path = '/home/users/nwan/02Project/16_MX2HETERO/slab_single/MoS2WS2/MoS2/01_BAND/KPOINTS'
+    procar_path = './PROCAR'
+    kpoints_path = './KPOINTS'
+
     PROCAR = readPROCAR(procar_path)
     e_fermi = get_efermi(PROCAR)
 
